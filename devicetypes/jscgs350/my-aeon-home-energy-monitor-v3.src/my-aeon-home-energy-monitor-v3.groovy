@@ -173,6 +173,23 @@ def zwaveEvent(physicalgraph.zwave.commands.meterv1.MeterReport cmd) {
         }
     }
 }
+
+def zwaveEvent(physicalgraph.zwave.commands.batteryv1.BatteryReport cmd) {
+    def map = [:]
+    map.name = "battery"
+    map.unit = "%"
+    if (cmd.batteryLevel == 0xFF) {
+        map.value = 1
+        map.descriptionText = "${device.displayName} has a low battery"
+        map.isStateChange = true
+    } else {
+        map.value = cmd.batteryLevel
+    }
+//    log.debug map
+    return map
+}
+
+
 def zwaveEvent(physicalgraph.zwave.Command cmd) {
     // Handles all Z-Wave commands we aren't interested in
     log.debug "Unhandled event ${cmd}"
