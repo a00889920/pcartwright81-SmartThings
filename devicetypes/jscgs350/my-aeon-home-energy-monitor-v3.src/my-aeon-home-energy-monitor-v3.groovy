@@ -192,7 +192,7 @@ def zwaveEvent(physicalgraph.zwave.commands.batteryv1.BatteryReport cmd) {
 
 def zwaveEvent(physicalgraph.zwave.Command cmd) {
     // Handles all Z-Wave commands we aren't interested in
-    log.debug "Unhandled event ${cmd}"
+   // log.debug "Unhandled event ${cmd}"
     [:]
 }
 def refresh() {
