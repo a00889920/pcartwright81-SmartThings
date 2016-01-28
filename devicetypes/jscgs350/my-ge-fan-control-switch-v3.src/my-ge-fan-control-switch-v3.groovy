@@ -21,7 +21,7 @@ metadata {
 		//fingerprint inClusters: "0x26"
 	}
 	tiles (scale:2) {
-		multiAttributeTile(name: "switch", type: "lighting", width: 6, height: 4, canChangeIcon: true) {
+		multiAttributeTile(name: "switch", type: "lighting", width: 6, height: 4, canChangeIcon: false) {
 			tileAttribute ("device.currentState", key: "PRIMARY_CONTROL") {
 				attributeState "default", label:'${currentValue}', action:"switch.off", icon:"st.Lighting.light24", backgroundColor:"#2179b8", nextState: "turningOff"
 				attributeState "HIGH", label:'HIGH', action:"switch.off", icon:"st.Lighting.light24", backgroundColor:"#486e13", nextState: "turningOff"
@@ -88,7 +88,14 @@ def parse(String description) {
 	}
 	log.debug "Parse returned ${result?.descriptionText}"
     def statusTextmsg = ""
-    statusTextmsg = "Fan speed is set to ${device.currentState('currentSpeed').value}"
+    if(device.currentState('currentSpeed') == null)
+    {
+    	statusTextmsg = "Fan speed is set to Off"
+    }
+    else
+    {
+    	statusTextmsg = "Fan speed is set to ${device.currentState('currentSpeed').value}"
+    }
     sendEvent("name":"statusText", "value":statusTextmsg)
 	result
 }
@@ -142,8 +149,8 @@ def createEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevel
 
 def doCreateEvent(physicalgraph.zwave.Command cmd, Map item1) {
 	def result = [item1]
-	def lowThresholdvalue = (settings.lowThreshold != null && settings.lowThreshold != "") ? settings.lowThreshold.toString() : "30"
-	def medThresholdvalue = (settings.medThreshold != null && settings.medThreshold != "") ? settings.medThreshold.toString() : "62"
+	def lowThresholdvalue = (settings.lowThreshold != null && settings.lowThreshold != "") ? settings.lowThreshold.toString() : "33"
+	def medThresholdvalue = (settings.medThreshold != null && settings.medThreshold != "") ? settings.medThreshold.toString() : "67"
 	def highThresholdvalue = (settings.highThreshold != null && settings.highThreshold != "") ? settings.highThreshold.toString() : "99"
 
 	item1.name = "switch"
