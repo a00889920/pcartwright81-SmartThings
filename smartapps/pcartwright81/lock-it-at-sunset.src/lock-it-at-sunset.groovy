@@ -26,14 +26,15 @@ preferences {
 }
 
 def installed() {
-  log.debug "Installed"
+  //log.debug "Installed"
   initialize()
 }
 
 def initialize() {
-	log.debug "Initializing"
+	//log.debug "Initializing"
     subscribe(location, "sunsetTime", sunsetTimeHandler)
-
+	//log.debug "The zip code for this location: ${location.zipCode}"
+    
     //schedule it to run today too
    scheduleLock(location.currentValue("sunsetTime"))
 }
@@ -44,12 +45,15 @@ def sunsetTimeHandler(evt) {
 }
 
 def updated(settings) {
-    log.debug "Updated"
+    //log.debug "Updated"
   	unsubscribe()
     initialize()
 }
 
 def setTimeCallback() {
+  if (phone) {
+      sendSms phone, "Time to lock door"
+  }
   log.debug "Time to lock door"
   if (contact) {
     doorOpenCheck()
@@ -65,12 +69,14 @@ def scheduleLock(sunsetString) {
     def sunsetTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", sunsetString)
 
     //calculate the offset
-    def timeBeforeSunset = new Date(sunsetTime.time + (offset * 60 * 1000))
-
-    log.debug "Scheduling for: $timeBeforeSunset (sunset is $sunsetTime)"
+    def timeaftersunset = new Date(sunsetTime.time + (offset * 60 * 1000))
+	if (phone) {
+      sendSms phone, "Scheduling for: $timeaftersunset (sunset is $sunsetTime)"
+    }
+    log.debug "Scheduling for: $timeaftersunset (sunset is $sunsetTime)"
 
     //schedule this to run one time
-    runOnce(timeBeforeSunset, setTimeCallback)
+    runOnce(timeaftersunset, setTimeCallback)
 }
 
 def doorOpenCheck() {
