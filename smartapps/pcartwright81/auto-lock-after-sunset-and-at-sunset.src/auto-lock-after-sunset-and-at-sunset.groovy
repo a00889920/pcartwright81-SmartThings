@@ -1,6 +1,5 @@
 /**
  *  Auto Lock After Sunset and at Sunset
- *  This app was merged from 
  *  Copyright 2016 Patrick Cartwright
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -40,43 +39,88 @@ preferences {
 }
 
 def installed() {
-	log.debug "Installed with settings: ${settings}"
-
-	initialize()
-}
-
-def updated() {
-	log.debug "Updated with settings: ${settings}"
-
-	unsubscribe()
-	unschedule()
-	initialize()
+  log.debug "Installed"
+  unsubscribe()
+  unschedule()
+  initialize()
 }
 
 def initialize() {
-	subscribe(lock0, "lock", door_handler, [filterEvents: false])
+	log.debug "Initializing"
+	setsunsetlock()
+	setautolock()
+}
+
+def setsunsetlock(){
+    subscribe(location, "sunsetTime", sunsetTimeHandler)
+	debug_handler("The zip code for this location: ${location.zipCode}")   
+    //schedule it to run today too
+	scheduleLock(location.currentValue("sunsetTime"))
+}
+
+def setautolock(){
+    subscribe(lock0, "lock", door_handler, [filterEvents: false])
     subscribe(lock0, "unlock", door_handler, [filterEvents: false])  
     subscribe(contact0, "contact.open", door_handler)
 	subscribe(contact0, "contact.closed", door_handler)
-    subscribe(location, "sunsetTime", sunsetTimeHandler)
-    scheduleLock(location.currentValue("sunsetTime"))
 }
 
-def debug_handler(msg)
-{
-	log.debug msg
-	if(debug_notify == "Yes")
-    {
-    	sendPush msg
-    }
+def sunsetTimeHandler(evt) {
+    //when I find out the sunset time, schedule the lock with an offset
+    scheduleLock(evt.value)
 }
 
-def push_handler(msg)
-{
-	if(push_enabled == "Yes")
-    {
-    	sendPush msg
+def updated(settings) {
+    debug_handler("Updated")
+  	unsubscribe()
+    initialize()
+}
+
+def setTimeCallback() {
+  
+  debug_handler("Time to lock door")
+  if (contact) {
+    doorOpenCheck()
+  } else {
+    lockMessage()
+    lock.lock()
+  }
+}
+
+def scheduleLock(sunsetString) {
+    debug_handler("Scheduling")
+    //get the Date value for the string
+    def sunsetTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", sunsetString)
+
+    //calculate the offset
+    def timeaftersunset = new Date(sunsetTime.time + (offset * 60 * 1000))
+	debug_handler("Scheduling for: $timeaftersunset (sunset is $sunsetTime)")
+
+    //schedule this to run one time
+    runOnce(timeaftersunset, setTimeCallback)
+}
+
+//todo rewrite this method
+def doorOpenCheck() {
+  def currentState = contact.contactState
+  if (currentState?.value == "open") {
+    def msg = "${contact.displayName} is open. Scheduled lock failed."
+    message_handler(msg)
+    if (sendPush) {
+      sendPush msg
     }
+    if (phone) {
+      sendSms phone, msg
+    }
+  } else {
+    lockMessage()
+    lock.lock()
+  }
+}
+
+def lockMessage() {
+  def msg = "Locking ${lock.displayName} due to scheduled lock."
+  debug_handler(msg)
 }
 
 def door_handler(evt)
@@ -131,11 +175,6 @@ def door_handler(evt)
 	}
 }
 
-def sunsetTimeHandler(evt) {
-    //when I find out the sunset time, schedule the lock with an offset
-    scheduleLock(evt.value)
-}
-
 def lock_door() // auto-lock specific
 {
 	if (contact0.latestValue("contact") == "closed")
@@ -163,8 +202,7 @@ def check_door_actually_locked() // if locked, reset lock-attempt counter. If un
         unschedule( check_door_actually_locked )
         if(state.lockstatus == "failed")
         {
-        	debug_handler("$lock0 has recovered and is now locked!")
-        	push_handler("$lock0 has recovered and is now locked!")
+        	message_handler("$lock0 has recovered and is now locked!")
             state.lockstatus = "okay"
         }
     }
@@ -181,8 +219,7 @@ def check_door_actually_locked() // if locked, reset lock-attempt counter. If un
             }
             else
             {
-                debug_handler("ALL Locking attempts FAILED! Check out $lock0 immediately!")
-                push_handler("ALL Locking attempts FAILED! Check out $lock0 immediately!")
+                message_handler("ALL Locking attempts FAILED! Check out $lock0 immediately!")
                 state.lockstatus = "failed"
                 unschedule( lock_door )
                 unschedule( check_door_actually_locked )
@@ -191,63 +228,28 @@ def check_door_actually_locked() // if locked, reset lock-attempt counter. If un
 	}
 }
 
-def setTimeCallback() {
-  if (phone) {
-      sendSms phone, "Time to lock door"
-  }
-  log.debug "Time to lock door"
-  if (contact0) {
-    doorOpenCheck()
-  } else {
-    lockMessage()
-    lock0.lock()
-  }
-}
-
 def notify_door_left_open()
 {
-	debug_handler("$contact0 has been left open for $leftopen_delay seconds.")
-	push_handler("$contact0 has been left open for $leftopen_delay seconds.")
+	message_handler("$contact0 has been left open for $leftopen_delay seconds.")
 }
 
+def debug_handler(msg)
+{
+	log.debug msg
+	if(debug_notify == "Yes")
+    {
+    	sendPush msg	
+    }
+}
 
-def scheduleLock(sunsetString) {
-    log.debug "Scheduling"
-    //get the Date value for the string
-    def sunsetTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", sunsetString)
-
-    //calculate the offset
-    def timeaftersunset = new Date(sunsetTime.time + (offset * 60 * 1000))
+def message_handler(msg)
+{
+    log.debug msg
+	if(push_enabled == "Yes")
+    {
+    	sendPush msg
+    }
 	if (phone) {
-      sendSms phone, "Scheduling for: $timeaftersunset (sunset is $sunsetTime)"
-    }
-    log.debug "Scheduling for: $timeaftersunset (sunset is $sunsetTime)"
-
-    //schedule this to run one time
-    runOnce(timeaftersunset, setTimeCallback)
-}
-
-def doorOpenCheck() {
-  def currentState = contact0.contactState
-  if (currentState?.value == "open") {
-    def msg = "${contact.displayName} is open. Scheduled lock failed."
-    log.info msg
-    if (sendPush) {
-      sendPush msg
-    }
-    if (phone) {
       sendSms phone, msg
-    }
-  } else {
-    lockMessage()
-    lock0.lock()
-  }
-}
-
-def lockMessage() {
-  def msg = "Locking ${lock.displayName} due to scheduled lock."
-  log.info msg
-  if (sendPush) {
-    sendNotificationEvent msg
   }
 }
