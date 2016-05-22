@@ -78,14 +78,8 @@ def updated(settings) {
 }
 
 def setTimeCallback() {
-  
-  debug_handler("Time to lock door")
-  if (contact) {
-    doorOpenCheck()
-  } else {
-    lockMessage()
-    lock.lock()
-  }
+    debug_handler("Locking ${lock.displayName} due to scheduled lock.")
+ 	lock_door()
 }
 
 def scheduleLock(sunsetString) {
@@ -101,28 +95,12 @@ def scheduleLock(sunsetString) {
     runOnce(timeaftersunset, setTimeCallback)
 }
 
-//todo rewrite this method
-def doorOpenCheck() {
-  def currentState = contact.contactState
-  if (currentState?.value == "open") {
-    def msg = "${contact.displayName} is open. Scheduled lock failed."
-    message_handler(msg)
-  } else {
-    lockMessage()
-    lock.lock()
-  }
-}
-
-def lockMessage() {
-  def msg = "Locking ${lock.displayName} due to scheduled lock."
-  debug_handler(msg)
-}
-
 def door_handler(evt)
-{
-    def thirtyMinsAfterSunset = getSunriseAndSunset(sunsetOffset: "+00:30")
+{	
+    def sunsetTime = getSunriseAndSunset()
+    def timeaftersunset = new Date(sunsetTime.time + (offset * 60 * 1000))
     def d = new Date()
-    if(!d.after(thirtyMinsAfterSunset.sunset) && !d.before(thirtyMinsAfterSunset.sunrise))
+    if(!d.after(timeaftersunset.sunset) && !d.before(timeaftersunset.sunrise))
     { 
         debug_handler("Not Locking Door It Is Not Time")
         return;
