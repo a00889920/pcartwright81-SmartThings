@@ -18,9 +18,9 @@ definition(
     author: "Patrick Cartwright",
     description: "This app auto locks the door after sunset and additionally locks the door at sunset.  An offset can be provided.",
     category: "Safety & Security",
-    iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png",
-    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png",
-    iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png")
+    iconUrl: "https://s3.amazonaws.com/smartapp-icons/Solution/doors-locks.png",
+    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Solution/doors-locks@2x.png",
+    iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Solution/doors-locks@2x.png")
 
 
 preferences {
@@ -40,14 +40,14 @@ preferences {
 }
 
 def installed() {
-  log.debug "Installed"
+  debug_handler("Installed")
   unsubscribe()
   unschedule()
   initialize()
 }
 
 def initialize() {
-	log.debug "Initializing"
+	debug_handler("Initializing")
 	setsunsetlock()
 	setautolock()
 }
@@ -107,12 +107,6 @@ def doorOpenCheck() {
   if (currentState?.value == "open") {
     def msg = "${contact.displayName} is open. Scheduled lock failed."
     message_handler(msg)
-    if (sendPush) {
-      sendPush msg
-    }
-    if (phone) {
-      sendSms phone, msg
-    }
   } else {
     lockMessage()
     lock.lock()

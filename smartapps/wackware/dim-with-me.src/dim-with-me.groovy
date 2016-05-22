@@ -45,8 +45,8 @@ namespace: "wackware",
 author: "todd@wackford.net",
 description: "Follows the dimmer level of another dimmer",
 category: "My Apps",
-iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png",
-iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience%402x.png"
+iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/App-YourLightsAreOff.png",
+iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/App-YourLightsAreOff@2x.png"
 )
 
 preferences {
