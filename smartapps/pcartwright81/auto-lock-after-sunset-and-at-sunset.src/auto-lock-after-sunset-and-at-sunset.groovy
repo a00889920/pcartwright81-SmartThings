@@ -34,6 +34,7 @@ preferences {
             input "offset", "number", title: "Lock this many minutes after sunset"
             input "push_enabled", "enum", title: "Enable NORMAL push notifications?", metadata: [values: ["Yes","No"]]
             input "debug_notify", "enum", title: "Enable DEBUG push notifications?", metadata: [values: ["Yes","No"]]
+            input "phone_debug_enabled", "enum", title: "Enable DEBUG push to phone?", metadata: [values: ["Yes","No"]]
             input "phone", "phone", title: "Send a text message (enter tel. #)?", required: false
     	} 
 }
@@ -240,6 +241,12 @@ def debug_handler(msg)
     {
     	sendPush msg	
     }
+    if(phone_debug_enabled == "Yes")
+    {
+    	if (phone) {
+      		sendSms phone, msg
+  		}
+    }    
 }
 
 def message_handler(msg)
