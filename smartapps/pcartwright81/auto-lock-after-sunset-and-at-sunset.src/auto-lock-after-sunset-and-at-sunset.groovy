@@ -48,15 +48,8 @@ def installed() {
 
 def initialize() {
 	debug_handler("Initializing")
-	setsunsetlock()
+	scheduleLock()
 	setautolock()
-}
-
-def setsunsetlock(){
-    subscribe(location, "sunsetTime", sunsetTimeHandler)
-	debug_handler("The zip code for this location: ${location.zipCode}")   
-    //schedule it to run today too
-	scheduleLock(location.currentValue("sunsetTime"))
 }
 
 def setautolock(){
@@ -66,41 +59,38 @@ def setautolock(){
 	subscribe(contact0, "contact.closed", door_handler)
 }
 
-def sunsetTimeHandler(evt) {
-    //when I find out the sunset time, schedule the lock with an offset
-    scheduleLock(evt.value)
-}
-
 def updated(settings) {
     debug_handler("Updated")
+    unschedule()
   	unsubscribe()
     initialize()
 }
 
-def setTimeCallback() {
+def timeToLockDoor() {
     debug_handler("Locking ${lock.displayName} due to scheduled lock.")
  	lock_door()
+    scheduleLock()
 }
 
-def scheduleLock(sunsetString) {
-    debug_handler("Scheduling")
+def scheduleLock() {
+	debug_handler("The zip code for this location: ${location.zipCode}")
+    
     //get the Date value for the string
-    def sunsetTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", sunsetString)
+    def sunsetTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", location.currentValue("sunsetTime"))
 
     //calculate the offset
     def timeaftersunset = new Date(sunsetTime.time + (offset * 60 * 1000))
-	debug_handler("Scheduling for: $timeaftersunset (sunset is $sunsetTime)")
+	debug_handler("Scheduling for: $timeaftersunset")
 
     //schedule this to run one time
-    runOnce(timeaftersunset, setTimeCallback)
+    runOnce(timeaftersunset, timeToLockDoor)
 }
 
 def door_handler(evt)
 {	
-    def sunsetTime = getSunriseAndSunset()
-    def timeaftersunset = new Date(sunsetTime.time + (offset * 60 * 1000))
+    def sunsetWithOffset = new Date(getSunriseAndSunset().sunset.time + (offset * 60 * 1000))
     def d = new Date()
-    if(!d.after(timeaftersunset.sunset) && !d.before(timeaftersunset.sunrise))
+    if(!d.after(sunsetWithOffset) && !d.before(getSunriseAndSunset().sunrise.time))
     { 
         debug_handler("Not Locking Door It Is Not Time")
         return;
