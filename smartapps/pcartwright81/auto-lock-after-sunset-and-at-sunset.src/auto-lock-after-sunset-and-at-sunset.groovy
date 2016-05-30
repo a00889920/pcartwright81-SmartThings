@@ -67,7 +67,7 @@ def updated(settings) {
 }
 
 def timeToLockDoor() {
-    debug_handler("Locking ${lock.displayName} due to scheduled lock.")
+    debug_handler("Locking ${lock0.displayName} due to scheduled lock.")
  	lock_door()
     scheduleLock()
 }
