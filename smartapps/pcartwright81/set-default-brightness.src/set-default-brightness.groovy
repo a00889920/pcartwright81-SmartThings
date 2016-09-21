@@ -53,12 +53,12 @@ def initialize() {
 }
 
 def dimHandler(evt) {
-	//get the dimmer that's been turned on
-	def dimmer = dimmers.find{it.id == evt.deviceId}
-	log.trace "${dimmer.displayName} was turned on..."
+	//get the dimmer that's been turned on    
+    log.trace "${dimmer.displayName} was turned on..."   
     def crntDimmerLevel = dimmer.currentValue("level").toInteger()
-    if(crntDimmerLevel == defaultleveltoInteger()){
+    def dimmerDefault = defaultlevel.toInteger()
+    if(crntDimmerLevel == dimmerDefault){
     	return
     }
-    dimmer.setLevel(5)
+    dimmer.setLevel(dimmerDefault)
 }
