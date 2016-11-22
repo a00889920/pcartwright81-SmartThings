@@ -155,6 +155,9 @@ def lockEventHandler(evt) {
 }
 
 def genericHandler(evt) {
+	if(state.body == null){
+    	state.body = []
+    }
     /*
     log.debug("------------------------------")
 	log.debug("date: ${evt.date}")
@@ -198,16 +201,22 @@ def genericHandler(evt) {
     json += "\"source\":\"${evt.source}\""
     json += "}"
     //log.debug("JSON: ${json}")
-
-    def params = [
+	state.body << json
+    log.info state.body.size()
+    if (state.body.size()  >= 10) {
+    	def body = state.body.collect { it }.join(',')
+    	def params = [
     	uri: "http://${logstash_host}:${logstash_port}",
-        body: json
-    ]
-    try {
-        httpPostJson(params)
-    } catch ( groovyx.net.http.HttpResponseException ex ) {
-       	log.debug "Unexpected response error: ${ex.statusCode}"
+        body: body
+    	]
+    	try {
+        	httpPostJson(params)
+            state.body = []
+    	} catch ( groovyx.net.http.HttpResponseException ex ) {
+       		log.debug "Unexpected response error: ${ex.statusCode}"
+    	}
     }
+    
 }
 
 def getgraphvalue(evt){
