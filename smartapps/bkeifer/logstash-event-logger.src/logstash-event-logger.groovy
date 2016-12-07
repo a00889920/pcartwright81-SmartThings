@@ -210,11 +210,12 @@ def genericHandler(evt) {
         body: body
     	]
     	try {
-        	httpPostJson(params)
-            state.body = []
+        	httpPostJson(params)            
     	} catch ( groovyx.net.http.HttpResponseException ex ) {
        		log.debug "Unexpected response error: ${ex.statusCode}"
+            return
     	}
+        state.body = []
     }
     
 }
@@ -310,7 +311,7 @@ def getgraphvalue(evt){
     
     if(evt.name  == "power")
     {	
-    	return evt.value.toInteger()
+    	return evt.value.toBigDecimal()
     }
     
     if(evt.name  == "energy")
