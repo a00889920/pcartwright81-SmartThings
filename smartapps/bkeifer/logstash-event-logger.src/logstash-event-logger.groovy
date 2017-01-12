@@ -204,20 +204,32 @@ def genericHandler(evt) {
 	state.body << json
     log.info state.body.size()
     if (state.body.size()  >= 10) {
-    	def body = state.body.collect { it }.join(',')
-    	def params = [
-    	uri: "http://${logstash_host}:${logstash_port}",
-        body: body
-    	]
-    	try {
-        	httpPostJson(params)            
-    	} catch ( groovyx.net.http.HttpResponseException ex ) {
-       		log.debug "Unexpected response error: ${ex.statusCode}"
-            return
-    	}
+    	//def body = state.body.collect { it }.join(',')
+    	//def params = [
+    	//uri: "http://${logstash_host}:${logstash_port}",
+        //body: body
+    	//]
+    	//try {
+       // 	httpPostJson(params)            
+    	//} catch ( groovyx.net.http.HttpResponseException ex ) {
+       	//	log.debug "Unexpected response error: ${ex.statusCode}"
+        //    return;
+    	//}
+        try{
+            def body = state.body.collect { it }.join(',')
+        	postapi(body);
+        }catch (Exception ex)
+        {
+        	log.Error(ex)
+            return;
+        }
         state.body = []
     }
     
+}
+private postapi(command) {
+	def length = command.getBytes().size().toString()
+	sendHubCommand(new physicalgraph.device.HubAction("""POST /house.metric HTTP/1.1\r\nHOST: ${logstash_host}:${logstash_port}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ${length}\r\nAccept:*/*\r\n\r\n${command}""", physicalgraph.device.Protocol.LAN, "XXXXXXXX:PPP"))
 }
 
 def getgraphvalue(evt){
