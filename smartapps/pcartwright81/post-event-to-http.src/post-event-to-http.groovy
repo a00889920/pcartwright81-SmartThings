@@ -13,7 +13,6 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
-import groovy.json.JsonSlurper;
 definition(
     name: "Post Event to Http",
     namespace: "pcartwright81",
@@ -82,9 +81,9 @@ preferences {
     }
         
 
-    section ("Logstash Server") {
-        input "logstash_host", "text", title: "Logstash Hostname/IP"
-        input "logstash_port", "number", title: "Logstash Port"
+    section ("Server") {
+        input "httpserver_host", "text", title: "Hostname/IP"
+        input "httpserver_port", "number", title: "Port"
     }
 
 }
@@ -104,7 +103,8 @@ def updated() {
 
 def initialize() {
 	// TODO: subscribe to attributes, devices, locations, etc.
-	doSubscriptions()
+    //state.body = []
+	doSubscriptions()  
 }
 
 def doSubscriptions() {
@@ -130,6 +130,7 @@ def doSubscriptions() {
     subscribe(thermostats,		"heatingSetpoint", 			heatingSetPointHandler)
     subscribe(thermostats,		"coolingSetpoint", 			coolingSetPointHandler)
     subscribe(locks, 			"lock", 					lockEventHandler)
+    subscribe(location, null, lanResponseHandler, [filterEvents:false])
 }
 def energyEventHandler(evt) {
 	genericHandler(evt)
@@ -157,28 +158,7 @@ def lockEventHandler(evt) {
 def genericHandler(evt) {
 	if(state.body == null){
     	state.body = []
-    }
-    /*
-    log.debug("------------------------------")
-	log.debug("date: ${evt.date}")
-	log.debug("name: ${evt.name}")
-    log.debug("displayName: ${evt.displayName}")
-    log.debug("device: ${evt.device}")
-    log.debug("deviceId: ${evt.deviceId}")
-    log.debug("value: ${evt.value}")
-    log.debug("isStateChange: ${evt.isStateChange()}")
-	log.debug("id: ${evt.id}")
-    log.debug("description: ${evt.description}")
-    log.debug("descriptionText: ${evt.descriptionText}")
-    log.debug("installedSmartAppId: ${evt.installedSmartAppId}")
-    log.debug("isoDate: ${evt.isoDate}")
-    log.debug("isDigital: ${evt.isDigital()}")
-    log.debug("isPhysical: ${evt.isPhysical()}")
-    log.debug("location: ${evt.location}")
-    log.debug("locationId: ${evt.locationId}")
-    log.debug("source: ${evt.source}")
-    log.debug("unit: ${evt.unit}")
-    */
+    }   
     def json = "{\"event\":{"
     json += "\"date\":\"${evt.date}\","
     json += "\"name\":\"${evt.name}\","
@@ -200,33 +180,49 @@ def genericHandler(evt) {
     json += "\"unit\":\"${evt.unit}\","
     json += "\"source\":\"${evt.source}\""
     json += "}}"
-    //log.debug("JSON: ${json}")
-    def jsonSlurper = new JsonSlurper()
-    def object = jsonSlurper.parseText(json)
-    if(object == null){
-    	log.error ("JSON IS NULL: ${json}")
-        return
-    }
-   
+    //log.debug("JSON: ${json}")     
 	state.body << json
     //log.info state.body.size()
-    if (state.body.size()  >= 10) {    	
+    if (state.body.size()  >= 3) {    	
         try{
             def jsonout = "{" + "\"events\":[" + state.body.collect { it }.join(',') + "]}"
             //log.debug jsonout
-        	postapi(jsonout);
+			//def msg = parseLanMessage(jsonout)
+			//def body = msg.body
+			//def status = msg.status
+            //log.debug status
+        	def length = jsonout.getBytes().size().toString()
+            def result = (new physicalgraph.device.HubAction([
+            method: "POST",
+            path: "/house.metric",
+            headers: [    
+            "Content-Length":"${length}",
+            HOST: "${httpserver_host}:${httpserver_port}",
+            "Content-Type":"application/json",
+            "Accept-Encoding":"gzip,deflate"
+            ],
+            body:jsonout
+            ]))
+            //log.debug jsonout
+            //log.debug result
+            sendHubCommand(result);            
+            
         }catch (Exception ex)
         {
-        	log.Error(ex)
+        	log.error ex
             return;
-        }
+        } 
         state.body = []
     }
     
 }
-private postapi(command) {
-	def length = command.getBytes().size().toString()
-	sendHubCommand(new physicalgraph.device.HubAction("""POST /house.metric HTTP/1.1\r\nHOST: ${logstash_host}:${logstash_port}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ${length}\r\nAccept:*/*\r\n\r\n${command}""", physicalgraph.device.Protocol.LAN, "XXXXXXXX:PPP"))
+
+def lanResponseHandler(evt){
+	//log.debug("Lan Response: ${evt.description}")
+    def msg = parseLanMessage(evt.description)
+	def body = msg.body
+	def status = msg.status
+    log.debug "Lan message response:" + "${status}"
 }
 
 def getgraphvalue(evt){
